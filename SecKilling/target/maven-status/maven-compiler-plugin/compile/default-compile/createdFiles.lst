@@ -1,0 +1,7 @@
+com\seckill\SecKillApplication.class
+com\seckill\service\UserService.class
+com\seckill\mapper\UserMapper.class
+com\seckill\controller\UserController.class
+com\seckill\common\CodeMsg.class
+com\seckill\common\Result.class
+com\seckill\entity\User.class

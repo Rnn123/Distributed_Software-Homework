@@ -65,4 +65,4 @@ CREATE TABLE `order` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='订单表';
 
 -- 初始化测试数据
-INSERT INTO `user` (`username`, `password`, `phone`) VALUES ('admin', '$2a$10$wS2/7N.7N.7N.7N.7N.7O', '13800000000'); -- password: password (BCrypt hash placeholder)
+INSERT INTO `user` (`username`, `password`, `phone`) VALUES ('admin', 'password', '13800000000'); -- password: password (plain text for simplicity)

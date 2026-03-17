@@ -9,12 +9,12 @@ import org.apache.ibatis.annotations.Select;
 @Mapper
 public interface UserMapper {
 
-    @Select("select * from user where id = #{id}")
+    @Select("select * from `user` where id = #{id}")
     public User getById(@Param("id") long id);
 
-    @Select("select * from user where phone = #{phone}")
+    @Select("select * from `user` where phone = #{phone}")
     public User getByPhone(@Param("phone") String phone);
 
-    @Insert("insert into user(username, password, phone, create_time) values(#{username}, #{password}, #{phone}, #{createTime})")
+    @Insert("insert into `user`(username, password, phone, create_time) values(#{username}, #{password}, #{phone}, #{createTime})")
     public int insert(User user);
 }
