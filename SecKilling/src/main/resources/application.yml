@@ -5,23 +5,58 @@ spring:
   application:
     name: seckill-service
   datasource:
-    # 需修改为实际数据库地址
-    url: jdbc:mysql://localhost:3306/seckill?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
-    username: root
-    password: 123456
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    type: com.zaxxer.hikari.HikariDataSource
-    hikari:
-      minimum-idle: 5
-      maximum-pool-size: 20
-      auto-commit: true
-      idle-timeout: 30000
-      pool-name: DatebookHikariCP
-      max-lifetime: 1800000
-      connection-timeout: 30000
+    write:
+      url: jdbc:mysql://localhost:3306/seckill?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+      username: root
+      password: root
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      hikari:
+        minimum-idle: 5
+        maximum-pool-size: 15
+        connection-timeout: 30000
+    read:
+      url: jdbc:mysql://localhost:3307/seckill?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+      username: root
+      password: root
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      hikari:
+        minimum-idle: 5
+        maximum-pool-size: 15
+        connection-timeout: 30000
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 3000ms
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      retries: 3
+    consumer:
+      group-id: seckill-order-group
+      auto-offset-reset: latest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      missing-topics-fatal: false
 
 mybatis:
-  mapper-locations: classpath:mapper/*.xml
-  type-aliases-package: com.seckill.entity
   configuration:
     map-underscore-to-camel-case: true
+
+logging:
+  level:
+    com.seckill: info
+
+app:
+  instance-id: local
+  kafka:
+    enabled: true
+    topic:
+      seckill-order: seckill-order-topic
+  snowflake:
+    datacenter-id: 1
+    machine-id: 1

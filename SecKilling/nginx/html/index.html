@@ -1,76 +1,53 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Seckill Product Detail</title>
-    <style>
-        body { font-family: Arial, sans-serif; padding: 20px; }
-        .product-card {
-            border: 1px solid #ddd;
-            padding: 20px;
-            max-width: 400px;
-            margin: 0 auto;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .product-image { width: 100%; height: auto; }
-        .price { color: #e4393c; font-size: 24px; font-weight: bold; }
-        .original-price { text-decoration: line-through; color: #999; }
-        button {
-            background-color: #e4393c; color: white; border: none; padding: 10px 20px;
-            cursor: pointer; font-size: 16px; border-radius: 4px; width: 100%;
-        }
-    </style>
+    <title>秒杀系统演示</title>
+    <link rel="stylesheet" href="/assets/styles.css">
 </head>
 <body>
+<div class="page-shell">
+    <header class="hero">
+        <div>
+            <p class="eyebrow">Distributed Software Homework</p>
+            <h1>秒杀系统演示台</h1>
+            <p class="hero-copy">前端静态文件由 Nginx 直接分发，商品与秒杀请求走后端集群，便于展示动静分离、负载均衡和缓存效果。</p>
+        </div>
+        <div class="card auth-card">
+            <h2>快速登录</h2>
+            <form id="loginForm">
+                <input name="phone" placeholder="手机号" value="13800000000">
+                <input name="password" type="password" placeholder="密码" value="password">
+                <button type="submit">登录获取 Token</button>
+            </form>
+            <p class="tip">默认测试用户：`13800000000 / password`</p>
+            <div id="authState" class="status-panel"></div>
+        </div>
+    </header>
 
-<div class="product-card">
-    <h1 id="productName">Loading...</h1>
-    <img id="productImage" src="" alt="Product Image" class="product-image" style="display:none;">
-    <p id="productDesc">Description loading...</p>
-    <p>
-        <span class="price" id="seckillPrice"></span>
-        <span class="original-price" id="originalPrice"></span>
-    </p>
-    <button onclick="buy()">Buy Now</button>
+    <main class="content-grid">
+        <section class="card">
+            <div class="section-head">
+                <h2>商品列表</h2>
+                <button id="refreshProducts" class="secondary-btn">刷新商品</button>
+            </div>
+            <div id="productList" class="product-grid"></div>
+        </section>
+
+        <section class="card side-card">
+            <h2>秒杀说明</h2>
+            <ul class="guide-list">
+                <li>静态资源：`/index.html`、`/assets/styles.css`、`/assets/app.js` 由 Nginx 直接响应。</li>
+                <li>动态接口：`/api/products`、`/api/seckill/{productId}` 由 Nginx 代理到两个 Spring Boot 实例。</li>
+                <li>缓存：商品详情优先走 Redis，并处理穿透、击穿、雪崩。</li>
+                <li>消息队列：秒杀请求写入 Kafka，再异步创建订单。</li>
+            </ul>
+            <div id="eventLog" class="event-log"></div>
+        </section>
+    </main>
 </div>
 
-<script>
-    // Assuming Nginx proxies /api to the backend
-    const API_BASE = '/api'; 
-
-    async function loadProduct(id) {
-        try {
-            const response = await fetch(`${API_BASE}/product/detail/${id}`);
-            const result = await response.json();
-            
-            if (result.code === 0) {
-                const product = result.data;
-                document.getElementById('productName').textContent = product.name;
-                document.getElementById('productDesc').textContent = product.description;
-                document.getElementById('seckillPrice').textContent = `¥${product.seckillPrice}`;
-                document.getElementById('originalPrice').textContent = `¥${product.originalPrice}`;
-                if(product.imageUrl) {
-                    document.getElementById('productImage').src = product.imageUrl;
-                    document.getElementById('productImage').style.display = 'block';
-                }
-            } else {
-                alert('Error loading product: ' + result.msg);
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            alert('Network error');
-        }
-    }
-
-    function buy() {
-        alert('Seckill function not implemented in frontend demo yet!');
-    }
-
-    // Load product with ID 1 on page load
-    loadProduct(1);
-</script>
-
+<script src="/assets/app.js"></script>
 </body>
 </html>

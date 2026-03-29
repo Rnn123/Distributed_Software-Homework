@@ -13,6 +13,14 @@ public interface ProductMapper {
     @Select("select * from product where id = #{id}")
     Product getById(@Param("id") long id);
 
-    @Select("select * from product")
+    @Select("select * from product order by id")
     List<Product> list();
+
+    @Select("""
+            select * from product
+            where name like concat('%', #{keyword}, '%')
+               or description like concat('%', #{keyword}, '%')
+            order by id
+            """)
+    List<Product> search(@Param("keyword") String keyword);
 }

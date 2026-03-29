@@ -1,41 +1,68 @@
-version: '3.8'
-
 services:
   mysql:
     image: mysql:8.0
     container_name: seckill-mysql
-    command: --default-authentication-plugin=mysql_native_password
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: seckill
     ports:
-      - "3306:3306"
+      - "3308:3306"
     volumes:
-      - ./sql/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - ./sql/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+      - ./mysql/master/conf/my.cnf:/etc/mysql/conf.d/my.cnf:ro
     healthcheck:
-      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
-      timeout: 20s
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-proot"]
+      interval: 10s
+      timeout: 5s
       retries: 10
 
   redis:
-    image: redis:7.0-alpine
+    image: redis:7.2-alpine
     container_name: seckill-redis
     restart: always
     ports:
       - "6379:6379"
 
+  kafka:
+    image: apache/kafka:3.9.2
+    container_name: seckill-kafka
+    restart: always
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 3
+    ports:
+      - "9092:9092"
+
   seckill-app-1:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: seckill-app-1
     restart: on-failure
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/seckill?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: root
-      SPRING_REDIS_HOST: redis
-      SPRING_REDIS_PORT: 6379
-      SERVER_PORT: 8080
+      SPRING_DATASOURCE_WRITE_URL: jdbc:mysql://mysql:3306/seckill?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_WRITE_USERNAME: root
+      SPRING_DATASOURCE_WRITE_PASSWORD: root
+      SPRING_DATASOURCE_READ_URL: jdbc:mysql://mysql:3306/seckill?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_READ_USERNAME: root
+      SPRING_DATASOURCE_READ_PASSWORD: root
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      APP_INSTANCE_ID: app-1
+      APP_SNOWFLAKE_MACHINE_ID: 1
+      APP_KAFKA_ENABLED: "true"
     ports:
       - "8081:8080"
     depends_on:
@@ -43,18 +70,28 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+      kafka:
+        condition: service_started
 
   seckill-app-2:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: seckill-app-2
     restart: on-failure
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/seckill?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: root
-      SPRING_REDIS_HOST: redis
-      SPRING_REDIS_PORT: 6379
-      SERVER_PORT: 8080
+      SPRING_DATASOURCE_WRITE_URL: jdbc:mysql://mysql:3306/seckill?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_WRITE_USERNAME: root
+      SPRING_DATASOURCE_WRITE_PASSWORD: root
+      SPRING_DATASOURCE_READ_URL: jdbc:mysql://mysql:3306/seckill?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_READ_USERNAME: root
+      SPRING_DATASOURCE_READ_PASSWORD: root
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      APP_INSTANCE_ID: app-2
+      APP_SNOWFLAKE_MACHINE_ID: 2
+      APP_KAFKA_ENABLED: "true"
     ports:
       - "8082:8080"
     depends_on:
@@ -62,9 +99,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+      kafka:
+        condition: service_started
 
   nginx:
-    image: nginx:alpine
+    image: nginx:1.27-alpine
     container_name: seckill-nginx
     restart: always
     ports:
