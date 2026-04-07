@@ -1,112 +1,82 @@
-# 秒杀系统作业项目
+# WHU-分布式原理作业——秒杀系统
 
-秒杀系统 Demo。项目在单仓库内按“用户、商品、库存、订单”四类服务职责进行模块化实现，并通过 Docker Compose 组织数据库、缓存、消息队列、后端多实例和 Nginx 网关。
 
-## 1. 技术栈
 
-- Java 17
-- Spring Boot 3.2
-- MyBatis
-- MySQL 8.0
-- Redis 7
-- Kafka 3.x
-- Nginx
-- Docker / Docker Compose
+### 1. 秒杀下单一致性
 
-## 2. 目录结构
+秒杀请求流程如下：
 
-```text
-SecKilling/
-├── Dockerfile
-├── docker-compose.yml
-├── docs/
-│   ├── DESIGN.md
-│   └── JMETER.md
-├── mysql/
-│   ├── master/conf/my.cnf
-│   └── slave/conf/my.cnf
-├── nginx/
-│   ├── conf/nginx.conf
-│   └── html/
-│       ├── index.html
-│       └── assets/
-├── sql/schema.sql
-└── src/main/java/com/seckill/
-```
+1. 用户发起 `POST /api/seckill/{productId}`
+2. Redis Lua 脚本原子完成：
+   - 判断是否重复抢购
+   - 判断库存是否大于 0
+   - 预扣减 Redis 库存
+   - 写入限购标记
+3. 系统生成订单 ID，发送秒杀下单消息
+4. 订单服务消费消息，先落库订单，状态置为 `WAIT_STOCK_CONFIRM`
+5. 订单服务通过事务消息表 `tx_message` 发布 `order-created`
+6. 库存服务消费 `order-created`，执行数据库冻结库存：
+   - `available_stock - 1`
+   - `frozen_stock + 1`
+7. 库存服务发布 `stock-result`
+8. 订单服务消费结果：
+   - 成功：订单状态更新为 `UNPAID`
+   - 失败：订单状态更新为 `CANCELED`，并补偿 Redis 库存、释放限购标记
 
-## 3. 功能清单
+### 2. 订单支付一致性
 
-- 用户注册、登录、获取当前用户
-- 商品列表、商品详情缓存、商品搜索
-- 库存查询
-- 秒杀下单、订单查询、订单状态轮询
-- Redis 缓存防穿透、防击穿、防雪崩
-- Redis 预减库存 + Kafka 异步处理订单
-- 同一用户同一商品只允许秒杀一次
-- Snowflake 订单 ID
-- MySQL 主从读写分离
-- Nginx 动静分离和负载均衡
+支付流程如下：
 
-## 4. 本地启动
+1. 用户发起 `POST /api/orders/{orderId}/pay`
+2. 支付服务本地事务写入 `payment_record`
+3. 同事务写入 `tx_message`，发布 `payment-success`
+4. 订单服务消费 `payment-success`，将订单状态从 `UNPAID` 改为 `PAID`
+5. 订单服务继续发布 `order-paid`
+6. 库存服务消费 `order-paid`，将冻结库存正式确认：
+   - `frozen_stock - 1`
 
-### 4.1 直接运行后端
+## 一致性设计
 
-1. 准备 MySQL 主从、Redis、Kafka，或使用下方 Compose 一键启动。
-2. 导入 `sql/schema.sql`。
-3. 在 `src/main/resources/application.yml` 中确认数据库、Redis、Kafka 地址。
-4. 执行：
+项目采用“事务消息 + Saga 补偿”的思路：
+
+- `tx_message` 作为本地事务消息表，保证本地业务数据和待发送消息一起提交
+- `TransactionMessageRelay` 定时扫描未发送消息并投递到 Kafka
+- 消费端通过订单状态、库存预留记录等方式保证幂等
+- 库存扣减失败时，回补 Redis 预扣库存并删除限购标记
+
+
+
+## 关键接口
+
+- `POST /api/seckill/{productId}`：发起秒杀
+- `GET /api/seckill/status/{orderId}`：查询秒杀处理状态
+- `GET /api/orders/{orderId}`：查询订单详情
+- `GET /api/orders?userId=1`：查询用户订单列表
+- `POST /api/orders/{orderId}/pay`：模拟支付并触发支付一致性流程
+
+## 订单状态说明
+
+- `-1`：等待库存服务确认
+- `0`：待支付
+- `1`：已支付
+- `2`：已取消
+- `3`：已完成
+
+## 启动说明
+
+1. 准备 MySQL、Redis、Kafka
+2. 导入 [sql/schema.sql](/e:/Distributed_Software/Distributed_Software-Homework/SecKilling/sql/schema.sql)
+3. 检查 [application.yml](/e:/Distributed_Software/Distributed_Software-Homework/SecKilling/src/main/resources/application.yml)
+4. 在 `SecKilling/` 目录执行：
 
 ```bash
 mvn spring-boot:run
 ```
 
-### 4.2 Docker Compose 一键启动
+## 验证
 
-在 `SecKilling/` 目录执行：
-
-```bash
-docker compose up --build -d
-```
-
-启动后访问：
-
-- 前端页面：`http://localhost/`
-- 后端实例 1：`http://localhost:8081`
-- 后端实例 2：`http://localhost:8082`
-- Nginx 统一入口：`http://localhost`
-- MySQL 主库：`localhost:3306`
-- MySQL 从库：`localhost:3307`
-- Redis：`localhost:6379`
-- Kafka：`localhost:9092`
-
-## 5. 默认测试账号
-
-- 手机号：`13800000000`
-- 密码：`password`
-
-## 6. 关键演示点
-
-### 6.1 负载均衡
-
-- 通过 `docker logs -f seckill-app-1`
-- 通过 `docker logs -f seckill-app-2`
-- 多次访问 `/api/products` 或进行 JMeter 压测
-- 观察两边实例日志中请求数量是否大致均衡
-
-### 6.2 动静分离
-
-- `/index.html`、`/assets/styles.css`、`/assets/app.js` 由 Nginx 直接返回
-- `/api/**` 由 Nginx 反向代理到后端集群
-
-### 6.3 读写分离
-
-- 写请求走主库
-- 带 `@ReadOnlyDataSource` 的查询方法自动切到从库
-
-### 6.4 秒杀链路
-
-1. 用户登录获取 Token
-2. Redis 校验重复购买并预减库存
-3. Kafka 异步投递下单消息
-4. 消费端写入订单并扣减数据库库存
-5. 前端轮询订单状态
+1. 登录获取 token
+2. 调用秒杀接口
+3. 轮询秒杀状态直到 `SUCCESS`
+4. 调用支付接口
+5. 再查订单详情，确认状态变为 `1`

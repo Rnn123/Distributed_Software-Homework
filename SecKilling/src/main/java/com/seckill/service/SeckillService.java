@@ -12,7 +12,6 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
-import java.util.concurrent.TimeUnit;
 
 @Service
 public class SeckillService {
@@ -66,19 +65,16 @@ public class SeckillService {
         }
 
         String duplicateKey = orderProcessor.duplicateKey(productId, user.getId());
-        Boolean firstRequest = redisTemplate.opsForValue().setIfAbsent(duplicateKey, "1", 1, TimeUnit.DAYS);
-        if (!Boolean.TRUE.equals(firstRequest)) {
+        InventoryService.RedisReservationResult reserveResult = inventoryService.reserveStockInRedis(productId, duplicateKey);
+        if (reserveResult == InventoryService.RedisReservationResult.DUPLICATE) {
             return Result.error(CodeMsg.REPEAT_SECKILL);
         }
-
-        boolean reserved = inventoryService.reserveStockInRedis(productId);
-        if (!reserved) {
-            redisTemplate.delete(duplicateKey);
+        if (reserveResult == InventoryService.RedisReservationResult.SOLD_OUT) {
             return Result.error(CodeMsg.STOCK_NOT_ENOUGH);
         }
 
         long orderId = snowflakeIdGenerator.nextId();
-        redisTemplate.opsForValue().set(orderProcessor.statusKey(orderId), "PROCESSING", 1, TimeUnit.DAYS);
+        orderProcessor.markProcessing(orderId);
 
         SeckillOrderMessage message = new SeckillOrderMessage();
         message.setOrderId(orderId);
@@ -87,18 +83,28 @@ public class SeckillService {
         message.setAmount(product.getSeckillPrice());
         message.setRequestTime(System.currentTimeMillis());
         messagePublisher.publish(message);
-        return Result.success(new SeckillSubmitResponse(orderId, "PROCESSING"));
+        return Result.success(new SeckillSubmitResponse(orderId, SeckillOrderProcessor.STATUS_PROCESSING));
     }
 
     public Result<String> queryStatus(Long orderId) {
         String status = redisTemplate.opsForValue().get(orderProcessor.statusKey(orderId));
-        if (status == null) {
-            Order order = orderService.getById(orderId);
-            if (order == null) {
-                return Result.error(CodeMsg.ORDER_NOT_FOUND);
-            }
-            status = "SUCCESS";
+        if (status != null) {
+            return Result.success(status);
         }
-        return Result.success(status);
+
+        Order order = orderService.getById(orderId);
+        if (order == null) {
+            return Result.error(CodeMsg.ORDER_NOT_FOUND);
+        }
+        if (order.getStatus() == OrderService.STATUS_PAID) {
+            return Result.success(SeckillOrderProcessor.STATUS_PAID);
+        }
+        if (order.getStatus() == OrderService.STATUS_UNPAID) {
+            return Result.success(SeckillOrderProcessor.STATUS_SUCCESS);
+        }
+        if (order.getStatus() == OrderService.STATUS_CANCELED) {
+            return Result.success(SeckillOrderProcessor.STATUS_SOLD_OUT);
+        }
+        return Result.success(SeckillOrderProcessor.STATUS_WAIT_STOCK);
     }
 }

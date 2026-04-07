@@ -55,8 +55,14 @@ app:
   instance-id: local
   kafka:
     enabled: true
+    outbox:
+      dispatch-delay-ms: 1000
     topic:
-      seckill-order: seckill-order-topic
+      seckill-order-request: seckill-order-request-topic
+      order-created: order-created-topic
+      stock-result: stock-result-topic
+      payment-success: payment-success-topic
+      order-paid: order-paid-topic
   snowflake:
     datacenter-id: 1
     machine-id: 1

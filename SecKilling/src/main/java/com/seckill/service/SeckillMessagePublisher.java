@@ -13,37 +13,42 @@ import java.util.concurrent.TimeUnit;
 public class SeckillMessagePublisher {
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
-    private final SeckillOrderProcessor orderProcessor;
+    private final SeckillOrderConsumer seckillOrderConsumer;
 
     @Value("${app.kafka.enabled:true}")
     private boolean kafkaEnabled;
 
-    @Value("${app.kafka.topic.seckill-order}")
+    @Value("${app.kafka.topic.seckill-order-request}")
     private String topic;
 
     public SeckillMessagePublisher(KafkaTemplate<String, String> kafkaTemplate,
                                    ObjectMapper objectMapper,
-                                   SeckillOrderProcessor orderProcessor) {
+                                   SeckillOrderConsumer seckillOrderConsumer) {
         this.kafkaTemplate = kafkaTemplate;
         this.objectMapper = objectMapper;
-        this.orderProcessor = orderProcessor;
+        this.seckillOrderConsumer = seckillOrderConsumer;
     }
 
     public void publish(SeckillOrderMessage message) {
+        String payload = toJson(message);
         if (!kafkaEnabled) {
-            orderProcessor.process(message);
+            seckillOrderConsumer.consume(payload);
             return;
         }
 
         try {
-            kafkaTemplate.send(topic, String.valueOf(message.getOrderId()), toJson(message))
+            kafkaTemplate.send(topic, String.valueOf(message.getOrderId()), payload)
                     .get(3, TimeUnit.SECONDS);
         } catch (Exception ex) {
-            orderProcessor.process(message);
+            seckillOrderConsumer.consume(payload);
         }
     }
 
-    private String toJson(SeckillOrderMessage message) throws JsonProcessingException {
-        return objectMapper.writeValueAsString(message);
+    private String toJson(SeckillOrderMessage message) {
+        try {
+            return objectMapper.writeValueAsString(message);
+        } catch (JsonProcessingException ex) {
+            throw new IllegalStateException("serialize seckill message failed", ex);
+        }
     }
 }

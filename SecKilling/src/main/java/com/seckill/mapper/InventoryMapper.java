@@ -25,5 +25,24 @@ public interface InventoryMapper {
             where product_id = #{productId}
               and available_stock > 0
             """)
-    int deductStock(@Param("productId") long productId);
+    int freezeStock(@Param("productId") long productId);
+
+    @Update("""
+            update inventory
+            set frozen_stock = frozen_stock - 1,
+                version = version + 1
+            where product_id = #{productId}
+              and frozen_stock > 0
+            """)
+    int confirmFrozenStock(@Param("productId") long productId);
+
+    @Update("""
+            update inventory
+            set available_stock = available_stock + 1,
+                frozen_stock = frozen_stock - 1,
+                version = version + 1
+            where product_id = #{productId}
+              and frozen_stock > 0
+            """)
+    int releaseFrozenStock(@Param("productId") long productId);
 }

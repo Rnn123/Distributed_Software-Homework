@@ -3,6 +3,9 @@ SET NAMES utf8mb4;
 CREATE DATABASE IF NOT EXISTS `seckill` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE `seckill`;
 
+DROP TABLE IF EXISTS `tx_message`;
+DROP TABLE IF EXISTS `stock_reservation`;
+DROP TABLE IF EXISTS `payment_record`;
 DROP TABLE IF EXISTS `order`;
 DROP TABLE IF EXISTS `inventory`;
 DROP TABLE IF EXISTS `product`;
@@ -52,7 +55,7 @@ CREATE TABLE `order` (
   `product_id` bigint NOT NULL COMMENT 'product id',
   `order_no` varchar(32) NOT NULL COMMENT 'order no',
   `amount` decimal(10,2) NOT NULL COMMENT 'amount',
-  `status` tinyint NOT NULL DEFAULT 0 COMMENT '0 unpaid 1 paid 2 canceled 3 finished',
+  `status` tinyint NOT NULL DEFAULT 0 COMMENT '-1 waiting stock 0 unpaid 1 paid 2 canceled 3 finished',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT 'create time',
   `pay_time` datetime DEFAULT NULL COMMENT 'pay time',
   PRIMARY KEY (`id`),
@@ -61,6 +64,49 @@ CREATE TABLE `order` (
   KEY `idx_user_id` (`user_id`),
   KEY `idx_product_id` (`product_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='order table';
+
+CREATE TABLE `payment_record` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'payment id',
+  `order_id` bigint NOT NULL COMMENT 'order id',
+  `user_id` bigint NOT NULL COMMENT 'user id',
+  `amount` decimal(10,2) NOT NULL COMMENT 'payment amount',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '1 success',
+  `pay_time` datetime NOT NULL COMMENT 'pay time',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT 'create time',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'update time',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_payment_order` (`order_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='payment record table';
+
+CREATE TABLE `stock_reservation` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'reservation id',
+  `order_id` bigint NOT NULL COMMENT 'order id',
+  `product_id` bigint NOT NULL COMMENT 'product id',
+  `user_id` bigint NOT NULL COMMENT 'user id',
+  `quantity` int NOT NULL DEFAULT 1 COMMENT 'reserved quantity',
+  `status` tinyint NOT NULL DEFAULT 0 COMMENT '0 reserved 1 confirmed 2 released',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT 'create time',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'update time',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_reservation_order` (`order_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='stock reservation table';
+
+CREATE TABLE `tx_message` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'message id',
+  `message_key` varchar(64) NOT NULL COMMENT 'message key',
+  `topic` varchar(64) NOT NULL COMMENT 'target topic',
+  `biz_type` varchar(64) NOT NULL COMMENT 'business type',
+  `biz_key` varchar(64) NOT NULL COMMENT 'business key',
+  `payload` text NOT NULL COMMENT 'json payload',
+  `status` tinyint NOT NULL DEFAULT 0 COMMENT '0 pending 1 sent',
+  `retry_count` int NOT NULL DEFAULT 0 COMMENT 'retry count',
+  `next_retry_time` datetime NOT NULL COMMENT 'next retry time',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT 'create time',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'update time',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_message_key` (`message_key`),
+  KEY `idx_status_next_retry` (`status`, `next_retry_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='transaction outbox table';
 
 INSERT INTO `user` (`username`, `password`, `phone`, `email`)
 VALUES
