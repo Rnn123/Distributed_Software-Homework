@@ -6,7 +6,7 @@
 
 - 用户服务 User Service：负责注册、登录、用户信息查询、登录态管理
 - 商品服务 Product Service：负责商品列表、商品详情、商品搜索、商品详情缓存
-- 库存服务 Inventory Service：负责库存查询、Redis 预减库存、数据库扣减库存
+- 库存服务 Inventory Service：负责库存查询、Redis 预减库存、数据库冻结与确认库存
 - 订单服务 Order Service：负责订单创建、订单查询、订单状态维护
 
 ### 1.2 架构图
@@ -23,12 +23,11 @@ graph TD
     App1 --> Kafka[(Kafka)]
     App2 --> Kafka
 
-    App1 --> MySQLMaster[(MySQL Master)]
-    App2 --> MySQLMaster
-
-    App1 -.读请求.-> MySQLSlave[(MySQL Slave)]
-    App2 -.读请求.-> MySQLSlave
+    App1 --> MySQL[(MySQL)]
+    App2 --> MySQL
 ```
+
+> 说明：代码里已经保留了读写数据源切换能力，但当前 `docker-compose.yml` 默认只启动了一个 MySQL 实例，所以这套仓库开箱即用的部署还是单库。
 
 ### 1.3 模块职责关系
 
@@ -69,6 +68,8 @@ graph LR
 
 - `GET /api/orders/{id}`
 - `GET /api/orders?userId=1`
+- `POST /api/orders/{orderId}/pay`
+  Header：`Authorization: Bearer <token>`
 
 ### 2.5 秒杀服务
 
@@ -147,7 +148,7 @@ erDiagram
 
 - Redis 适合高并发热点商品缓存和库存预减
 - Kafka 适合将下单请求异步化，降低瞬时数据库压力
-- MySQL 主从适合作业中的读写分离演示
+- MySQL 结合读写数据源切换，便于保留读写分离演示能力
 - Nginx 配置简单，便于演示轮询、最少连接和 IP Hash
 
 ## 5. 关键设计说明
@@ -162,10 +163,10 @@ erDiagram
 ### 5.2 秒杀下单
 
 1. 用户登录后携带 Token 发起秒杀请求
-2. Redis 使用 `SETNX` 标记同一用户同一商品是否已抢购
-3. Redis 对库存键执行 `DECR` 预扣库存
-4. 生成雪花订单 ID，发送 Kafka 消息
-5. 消费端在事务中写入订单、扣减数据库库存
+2. Redis 通过 Lua 脚本一次性判断是否重复抢购，并预扣库存
+3. 生成雪花订单 ID，发送 Kafka 消息
+4. 订单侧先落库订单，并通过事务消息表发布 `order-created`
+5. 库存侧消费 `order-created` 后冻结数据库库存
 6. 若库存不足或处理失败，执行补偿并回滚 Redis 标记
 
 ### 5.3 幂等性
@@ -176,14 +177,16 @@ erDiagram
 ### 5.4 数据一致性
 
 - Redis 只做预减和快速限流
-- 最终扣库存以数据库原子更新为准
+- 数据库侧通过冻结库存和支付后确认来保证最终结果
 - 异步消费失败时执行库存回补与去重标记释放
 
 ### 5.5 读写分离
 
 - 写请求默认走主库
-- 读请求通过 `@ReadOnlyDataSource` 切换到从库
+- 读请求通过 `@ReadOnlyDataSource` 切换到读数据源
 - 使用 `AbstractRoutingDataSource` 在运行期动态选择数据源
+
+补充说明：当前仓库里的 `docker-compose.yml` 把读写数据源都指向同一个 MySQL 容器，所以默认部署下不会真的看到主从分离效果；如果后面补上从库实例，这套切换逻辑可以直接接着用。
 
 ## 6. 环境准备
 
@@ -214,18 +217,3 @@ upstream seckill_backend {
 
 - `/` 与 `/assets/**`：Nginx 直接返回静态资源
 - `/api/**`：代理到后端集群
-
-## 8. 可选扩展
-
-### 8.1 ElasticSearch 商品搜索
-
-作业中为可选项。当前项目保留了 `/api/products?keyword=` 的搜索接口，默认用 MySQL `LIKE` 实现；如果要升级为 ElasticSearch，可在商品服务中增加索引同步与查询适配层。
-
-### 8.2 分库分表
-
-作业中为选做项。可进一步引入 ShardingSphere-JDBC：
-
-- 按用户 ID 分库
-- 按订单 ID 分表
-
-当前代码已使用雪花算法生成订单 ID，便于后续接入分片规则。

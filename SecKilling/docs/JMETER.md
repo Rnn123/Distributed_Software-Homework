@@ -9,7 +9,7 @@
 
 ## 2. 压测前准备
 
-1. 启动全部容器：
+1. 在 `SecKilling/` 目录下启动全部容器：
 
 ```bash
 docker compose up --build -d
@@ -33,7 +33,7 @@ docker logs -f seckill-app-2
 
 - 请求地址：`GET http://localhost/`
 - 或者：`GET http://localhost/assets/styles.css`
-- 建议线程数：100
+- 线程数：100
 - Ramp-Up：10s
 - 循环次数：20
 
@@ -67,27 +67,4 @@ docker logs -f seckill-app-2
 - 库存不会被扣成负数
 - 订单数不会超过商品可用库存
 
-## 4. 建议的 JMeter 组件
 
-- Thread Group
-- HTTP Request Defaults
-- HTTP Header Manager
-- JSON Extractor
-- View Results Tree
-- Summary Report
-- Aggregate Report
-
-## 5. 观察指标
-
-- Average 响应时间
-- 95% Line
-- Throughput
-- Error %
-- 两个后端实例日志中的请求数量
-
-## 6. 作业报告可写结论
-
-- 静态文件由 Nginx 直接处理，响应时间更低
-- 动态接口通过 Nginx 转发到两个应用实例，请求量大致均衡
-- 商品详情接口在 Redis 缓存命中后响应时间下降明显
-- 秒杀高并发下通过 Redis 预减库存、数据库原子扣减和幂等校验避免了超卖
