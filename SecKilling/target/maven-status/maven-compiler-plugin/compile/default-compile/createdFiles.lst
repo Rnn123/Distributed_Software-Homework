@@ -8,6 +8,7 @@ com\seckill\mapper\PaymentRecordMapper.class
 com\seckill\dto\PaymentSuccessMessage.class
 com\seckill\mapper\StockReservationMapper.class
 com\seckill\mapper\UserMapper.class
+com\seckill\controller\TrafficGovernanceController.class
 com\seckill\entity\Order.class
 com\seckill\mapper\TxMessageMapper.class
 com\seckill\entity\TxMessage.class
@@ -20,10 +21,13 @@ com\seckill\service\SeckillOrderConsumer.class
 com\seckill\service\SeckillService.class
 com\seckill\context\DataSourceContextHolder.class
 com\seckill\config\ReadOnlyDataSource.class
+com\seckill\controller\RuntimeConfigController.class
 com\seckill\exception\GlobalExceptionHandler.class
 com\seckill\config\SecurityBeanConfig.class
+com\seckill\config\TrafficRuleProperties.class
 com\seckill\entity\PaymentRecord.class
 com\seckill\util\TokenUtil.class
+com\seckill\config\DynamicConfigProperties.class
 com\seckill\common\CodeMsg.class
 com\seckill\common\Result.class
 com\seckill\mapper\OrderMapper.class
@@ -35,6 +39,7 @@ com\seckill\config\DataSourceConfig.class
 com\seckill\dto\StockResultMessage.class
 com\seckill\entity\StockReservation.class
 com\seckill\exception\BusinessException.class
+com\seckill\config\SentinelTrafficRuleConfig.class
 com\seckill\service\InventoryService.class
 com\seckill\service\SeckillMessagePublisher.class
 com\seckill\config\ReadOnlyDataSourceAspect.class

@@ -16,6 +16,8 @@ E:\Distributed_Software\Distributed_Software-Homework\SecKilling\src\main\java\c
 E:\Distributed_Software\Distributed_Software-Homework\SecKilling\src\main\java\com\seckill\entity\Product.java
 E:\Distributed_Software\Distributed_Software-Homework\SecKilling\src\main\java\com\seckill\mapper\OrderMapper.java
 E:\Distributed_Software\Distributed_Software-Homework\SecKilling\src\main\java\com\seckill\service\PaymentService.java
+E:\Distributed_Software\Distributed_Software-Homework\SecKilling\src\main\java\com\seckill\controller\TrafficGovernanceController.java
+E:\Distributed_Software\Distributed_Software-Homework\SecKilling\src\main\java\com\seckill\config\TrafficRuleProperties.java
 E:\Distributed_Software\Distributed_Software-Homework\SecKilling\src\main\java\com\seckill\service\UserService.java
 E:\Distributed_Software\Distributed_Software-Homework\SecKilling\src\main\java\com\seckill\exception\BusinessException.java
 E:\Distributed_Software\Distributed_Software-Homework\SecKilling\src\main\java\com\seckill\dto\PaymentSuccessMessage.java
@@ -25,6 +27,7 @@ E:\Distributed_Software\Distributed_Software-Homework\SecKilling\src\main\java\c
 E:\Distributed_Software\Distributed_Software-Homework\SecKilling\src\main\java\com\seckill\service\TransactionMessageRelay.java
 E:\Distributed_Software\Distributed_Software-Homework\SecKilling\src\main\java\com\seckill\mapper\TxMessageMapper.java
 E:\Distributed_Software\Distributed_Software-Homework\SecKilling\src\main\java\com\seckill\service\TransactionMessageService.java
+E:\Distributed_Software\Distributed_Software-Homework\SecKilling\src\main\java\com\seckill\controller\RuntimeConfigController.java
 E:\Distributed_Software\Distributed_Software-Homework\SecKilling\src\main\java\com\seckill\config\SecurityBeanConfig.java
 E:\Distributed_Software\Distributed_Software-Homework\SecKilling\src\main\java\com\seckill\entity\StockReservation.java
 E:\Distributed_Software\Distributed_Software-Homework\SecKilling\src\main\java\com\seckill\entity\Inventory.java
@@ -45,7 +48,9 @@ E:\Distributed_Software\Distributed_Software-Homework\SecKilling\src\main\java\c
 E:\Distributed_Software\Distributed_Software-Homework\SecKilling\src\main\java\com\seckill\util\SnowflakeIdGenerator.java
 E:\Distributed_Software\Distributed_Software-Homework\SecKilling\src\main\java\com\seckill\dto\OrderStatusMessage.java
 E:\Distributed_Software\Distributed_Software-Homework\SecKilling\src\main\java\com\seckill\context\DataSourceContextHolder.java
+E:\Distributed_Software\Distributed_Software-Homework\SecKilling\src\main\java\com\seckill\config\SentinelTrafficRuleConfig.java
 E:\Distributed_Software\Distributed_Software-Homework\SecKilling\src\main\java\com\seckill\mapper\UserMapper.java
+E:\Distributed_Software\Distributed_Software-Homework\SecKilling\src\main\java\com\seckill\config\DynamicConfigProperties.java
 E:\Distributed_Software\Distributed_Software-Homework\SecKilling\src\main\java\com\seckill\dto\SeckillSubmitResponse.java
 E:\Distributed_Software\Distributed_Software-Homework\SecKilling\src\main\java\com\seckill\service\SeckillOrderConsumer.java
 E:\Distributed_Software\Distributed_Software-Homework\SecKilling\src\main\java\com\seckill\common\CodeMsg.java

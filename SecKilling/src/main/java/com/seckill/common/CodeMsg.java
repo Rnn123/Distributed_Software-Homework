@@ -9,6 +9,9 @@ public class CodeMsg {
     public static final CodeMsg SERVER_ERROR = new CodeMsg(500100, "server error");
     public static final CodeMsg BIND_ERROR = new CodeMsg(500101, "request validation failed");
     public static final CodeMsg REQUEST_ILLEGAL = new CodeMsg(500102, "illegal request");
+    public static final CodeMsg FLOW_LIMITED = new CodeMsg(500103, "request is rate limited");
+    public static final CodeMsg CIRCUIT_OPEN = new CodeMsg(500104, "service circuit breaker is open");
+    public static final CodeMsg SERVICE_DEGRADED = new CodeMsg(500105, "service has been degraded");
 
     public static final CodeMsg SESSION_ERROR = new CodeMsg(500210, "login session expired");
     public static final CodeMsg PASSWORD_EMPTY = new CodeMsg(500211, "password cannot be empty");

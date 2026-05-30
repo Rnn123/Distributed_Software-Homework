@@ -1,0 +1,64 @@
+server:
+  port: 9000
+
+spring:
+  application:
+    name: seckill-gateway
+  config:
+    import: optional:nacos:${spring.application.name}.yml
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 3000ms
+  cloud:
+    nacos:
+      server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+      config:
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+        file-extension: yml
+        refresh-enabled: true
+    gateway:
+      default-filters:
+        - AddRequestHeader=X-Gateway-Name, seckill-gateway
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        - id: seckill-submit-rate-limit
+          uri: lb://seckill-service
+          predicates:
+            - Path=/api/seckill/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                key-resolver: "#{@ipKeyResolver}"
+                redis-rate-limiter.replenishRate: ${GATEWAY_SECKILL_REPLENISH_RATE:20}
+                redis-rate-limiter.burstCapacity: ${GATEWAY_SECKILL_BURST_CAPACITY:40}
+                redis-rate-limiter.requestedTokens: 1
+            - name: CircuitBreaker
+              args:
+                name: seckillSubmitCircuitBreaker
+                fallbackUri: forward:/fallback/seckill
+        - id: seckill-api
+          uri: lb://seckill-service
+          predicates:
+            - Path=/api/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: seckillApiCircuitBreaker
+                fallbackUri: forward:/fallback/seckill
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,gateway

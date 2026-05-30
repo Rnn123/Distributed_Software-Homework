@@ -1,0 +1,28 @@
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: seckill-submit-rate-limit
+          uri: lb://seckill-service
+          predicates:
+            - Path=/api/seckill/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                key-resolver: "#{@ipKeyResolver}"
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+            - name: CircuitBreaker
+              args:
+                name: seckillSubmitCircuitBreaker
+                fallbackUri: forward:/fallback/seckill
+        - id: seckill-api
+          uri: lb://seckill-service
+          predicates:
+            - Path=/api/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: seckillApiCircuitBreaker
+                fallbackUri: forward:/fallback/seckill

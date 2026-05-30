@@ -44,6 +44,21 @@ services:
     ports:
       - "9092:9092"
 
+  nacos:
+    image: nacos/nacos-server:v2.3.2
+    container_name: seckill-nacos
+    restart: always
+    environment:
+      MODE: standalone
+      NACOS_AUTH_ENABLE: "false"
+      JVM_XMS: 256m
+      JVM_XMX: 512m
+      JVM_XMN: 128m
+    ports:
+      - "8848:8848"
+      - "9848:9848"
+      - "9849:9849"
+
   seckill-app-1:
     build:
       context: .
@@ -60,6 +75,7 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      NACOS_SERVER_ADDR: nacos:8848
       APP_INSTANCE_ID: app-1
       APP_SNOWFLAKE_MACHINE_ID: 1
       APP_KAFKA_ENABLED: "true"
@@ -71,6 +87,8 @@ services:
       redis:
         condition: service_started
       kafka:
+        condition: service_started
+      nacos:
         condition: service_started
 
   seckill-app-2:
@@ -89,6 +107,7 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      NACOS_SERVER_ADDR: nacos:8848
       APP_INSTANCE_ID: app-2
       APP_SNOWFLAKE_MACHINE_ID: 2
       APP_KAFKA_ENABLED: "true"
@@ -100,6 +119,32 @@ services:
       redis:
         condition: service_started
       kafka:
+        condition: service_started
+      nacos:
+        condition: service_started
+
+  seckill-gateway:
+    build:
+      context: ./seckill-gateway
+      dockerfile: Dockerfile
+    container_name: seckill-gateway
+    restart: on-failure
+    environment:
+      NACOS_SERVER_ADDR: nacos:8848
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      GATEWAY_SECKILL_REPLENISH_RATE: 20
+      GATEWAY_SECKILL_BURST_CAPACITY: 40
+    ports:
+      - "9000:9000"
+    depends_on:
+      redis:
+        condition: service_started
+      nacos:
+        condition: service_started
+      seckill-app-1:
+        condition: service_started
+      seckill-app-2:
         condition: service_started
 
   nginx:

@@ -1,0 +1,11 @@
+app:
+  dynamic:
+    banner: nacos-config-v1
+    seckill-enabled: true
+  traffic:
+    ping-qps: 2
+    slow-request-ms: 300
+    slow-ratio-threshold: 0.5
+    min-request-amount: 5
+    stat-interval-ms: 10000
+    degrade-time-window-seconds: 10

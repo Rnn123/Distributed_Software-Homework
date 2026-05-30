@@ -4,6 +4,25 @@ server:
 spring:
   application:
     name: seckill-service
+  config:
+    import: optional:nacos:${spring.application.name}.yml
+  cloud:
+    nacos:
+      server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+      config:
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+        file-extension: yml
+        refresh-enabled: true
+    sentinel:
+      transport:
+        dashboard: ${SENTINEL_DASHBOARD:localhost:8858}
+      eager: true
   datasource:
     write:
       url: jdbc:mysql://localhost:3306/seckill?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
@@ -53,6 +72,16 @@ logging:
 
 app:
   instance-id: local
+  dynamic:
+    banner: local-config
+    seckill-enabled: true
+  traffic:
+    ping-qps: 5
+    slow-request-ms: 300
+    slow-ratio-threshold: 0.5
+    min-request-amount: 5
+    stat-interval-ms: 10000
+    degrade-time-window-seconds: 10
   kafka:
     enabled: true
     outbox:

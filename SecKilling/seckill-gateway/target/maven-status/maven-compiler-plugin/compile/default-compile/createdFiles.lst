@@ -1,0 +1,3 @@
+com\seckill\gateway\config\GatewayRateLimitConfig.class
+com\seckill\gateway\controller\FallbackController.class
+com\seckill\gateway\SeckillGatewayApplication.class
